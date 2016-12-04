@@ -124,6 +124,5 @@ class Dawg:
         gaddagWords = []
         for word in words:
             for i in range(len(word)):
-                #newWord = "+".join([word[i::-1], word[i+1:]])
                 gaddagWords.append("+".join([word[i::-1], word[i+1:]]))
         return Dawg.makeDawg(gaddagWords)
