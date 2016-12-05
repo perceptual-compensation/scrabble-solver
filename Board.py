@@ -54,6 +54,10 @@ class Board:
             self.boardSet[i] = Position(i)
 
     def addWord(self, word, row, col, direction):
+        print("Row good? " + str(row in range(self.nrow)))
+        print("Col good? " + str(col in range(self.ncol)))
+        if not row in range(self.nrow) or not col in range(self.ncol):
+            raise Exception("Position out of bounds.")
         if direction == "H":
             if col + len(word) > self.ncol:
                 raise Exception("Word too long.")

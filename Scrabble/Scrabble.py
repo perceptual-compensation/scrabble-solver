@@ -7,6 +7,7 @@ Created on Sat Nov 26 15:42:46 2016
 import os
 import pickle
 from Scrabble.Dawg import Dawg as Dawg
+from Scrabble.Board import Board as Board
 
 DICTFILE = os.path.split(__file__)[0] + "/Dictionary.txt"
 DAWG = os.path.split(__file__)[0] + "/Dawg.pkl"
@@ -27,3 +28,4 @@ else:
     with open(GADDAG, "rb") as pklGaddag:
         gaddag = pickle.load(pklGaddag)
 
+board = Board()
