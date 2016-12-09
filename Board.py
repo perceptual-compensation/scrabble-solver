@@ -84,36 +84,39 @@ class Board:
                          itertools.product([row], range(col, col + len(word)))]
         if self.anchors.isdisjoint(positions):
             raise Exception("Word must be placed on an anchor.")
-        for i, c in enumerate(word):
-            if not positions[i].crossCheck(c, direction):
+        for i, char in enumerate(word):
+            if not positions[i].crossCheck(char, direction):
                 raise Exception("Word incompatible.")
-        for i, c in enumerate(word):
-            positions[i].place(c, direction)
+        for i, char in enumerate(word):
+            positions[i].place(char, direction)
             self.anchors.discard(positions[i])
             for neighbor in positions[i].neighbors:
                 if not neighbor.tile:
                     self.anchors.add(neighbor)
         for anchor in self.anchors:
-            for direc in [0, 1]:
-                for char in anchor.tilesets[direc]:
-                    self.updateAnchor(anchor)
+            self.updateAnchor(anchor)
 
     def updateAnchor(self, anchor):
+        tiles = [set()] * 2
         for direction, tileset in enumerate(anchor.tilesets):
+            if not anchor.nextPosition[direction].tile and 
+                    not anchor.nextPosition[(direction + 2) % 4].tile:
+                continue
             for char in tileset:
                 dictNode = self.dictionary.root.edges[char]
                 pos = anchor.nextPosition[direction]
                 while pos and pos.tile in dictNode.edges:
                     dictNode = dictNode.edges[pos.tile]
                     pos = pos.nextPosition[direction]
-                if pos or '+' not in dictNode.edges:
-                    tileset.discard(char)
-                    break
+                if (pos and pos.tile) or '+' not in dictNode.edges:
+                    continue
                 dictNode = dictNode.edges['+']
                 pos = anchor.nextPosition[(direction + 2) % 4]
                 while pos and pos.tile in dictNode.edges:
                     dictNode = dictNode.edges[pos.tile]
                     pos = pos.nextPosition[(direction + 2) % 4]
-                if pos or not dictNode.final:
-                    tileset.discard(char)
-                    break
+                if (pos and pos.tile) or not dictNode.final:
+                    continue
+                tiles[direction].add(char)
+        anchor.tilesets = tiles
+        
