@@ -35,6 +35,7 @@ class DawgNode:
         return self.__str__() == other.__str__()
 
 class Dawg:
+
     def __init__(self):
         self.previousWord = ""
         self.root = DawgNode()
@@ -126,3 +127,10 @@ class Dawg:
             for i in range(len(word)):
                 gaddagWords.append("+".join([word[i::-1], word[i+1:]]))
         return Dawg.makeDawg(gaddagWords)
+
+    def makeDaggad(words = []):
+        daggadWords = []
+        for word in words:
+            for i in range(len(word)):
+                daggadWords.append("+".join([word[i:], word[:i][::-1]]))
+        return Dawg.makeDawg(daggadWords)
