@@ -12,8 +12,7 @@ class Position:
 
     def __init__(self, coords):
         self.coords = coords
-        self.neighbors = set()
-        self.nextPosition = [None] * 4
+        self.neighbors = [None] * 4
         self.tilesets = [Position.basicTileSet] * 2
         self.tile = ""
         self.letterScore = 1
@@ -29,11 +28,9 @@ class Position:
         return self.__str__() == other.__str__()
 
     def addNeighbor(self, other, direction):
-        self.nextPosition[direction] = other
+        self.neighbors[direction] = other
         if other:
-            other.nextPosition[(direction + 2) % 4] = self
-            self.neighbors.add(other)
-            other.neighbors.add(self)
+            other.neighbors[(direction + 2) % 4] = self
 
     def crossCheck(self, character, direction):
         return character in self.tilesets[not direction]
@@ -52,10 +49,11 @@ class Position:
 
 class Board:
 
-    def __init__(self, nrow = 13, ncol = 13, dictionary = Dawg()):
+    def __init__(self, nrow = 13, ncol = 13, dictionary = Dawg(), values = {}):
         self.nrow = nrow
         self.ncol = ncol
         self.dictionary = dictionary
+        self.values = values
         self.boardSet = {}
         self.anchors = set()
         for r, c in itertools.product(range(nrow), range(ncol)):
@@ -91,32 +89,101 @@ class Board:
             positions[i].place(char, direction)
             self.anchors.discard(positions[i])
             for neighbor in positions[i].neighbors:
-                if not neighbor.tile:
+                if neighbor and not neighbor.tile:
                     self.anchors.add(neighbor)
         for anchor in self.anchors:
             self.updateAnchor(anchor)
 
     def updateAnchor(self, anchor):
-        tiles = [set()] * 2
+        #tiles = [set()] * 2
         for direction, tileset in enumerate(anchor.tilesets):
-            if not anchor.nextPosition[direction].tile and 
-                    not anchor.nextPosition[(direction + 2) % 4].tile:
-                continue
+            tiles = set()
+            if not anchor.neighbors[direction] \
+                    or not anchor.neighbors[direction].tile:
+                if not anchor.neighbors[(direction + 2) % 4] \
+                        or not anchor.neighbors[(direction + 2) % 4].tile:
+                   # tiles[direction] = tileset
+                    continue
             for char in tileset:
                 dictNode = self.dictionary.root.edges[char]
-                pos = anchor.nextPosition[direction]
+                pos = anchor.neighbors[direction]
                 while pos and pos.tile in dictNode.edges:
                     dictNode = dictNode.edges[pos.tile]
-                    pos = pos.nextPosition[direction]
+                    pos = pos.neighbors[direction]
                 if (pos and pos.tile) or '+' not in dictNode.edges:
                     continue
                 dictNode = dictNode.edges['+']
-                pos = anchor.nextPosition[(direction + 2) % 4]
+                pos = anchor.neighbors[(direction + 2) % 4]
                 while pos and pos.tile in dictNode.edges:
                     dictNode = dictNode.edges[pos.tile]
-                    pos = pos.nextPosition[(direction + 2) % 4]
+                    pos = pos.neighbors[(direction + 2) % 4]
                 if (pos and pos.tile) or not dictNode.final:
                     continue
-                tiles[direction].add(char)
-        anchor.tilesets = tiles
-        
+                tiles.add(char)
+            print("{} {} {}".format(str(anchor),str(direction),"".join(tiles)))
+            anchor.tilesets[direction] = tiles
+        #anchor.tilesets = tiles
+        print(anchor.tilesets)
+
+    def printAnchors(self):
+        for a in self.anchors:
+            for direction, tileset in enumerate(a.tilesets):
+                print("{} tileset {}: {}".format(str(a), direction, "".join(tileset)))
+
+    def printBoard(self):
+        for row in range(self.nrow):
+            print("  " + " ".join(range(ncol)))
+            strng = "" if row < 10 else " " + str(row) + " "
+            for col in range(self.ncol):
+                pos = self.boardSet[(row, col)]
+                strng += "  " if not pos.tile else (pos.tile + " ")
+            print(strng)
+
+    def startSearch(self, deck):
+        wordSet = set()
+        for anchor in self.anchors:
+            for direction in [0, 1]:
+                node = self.dictionary.root
+                word = "{}-{}-".format(str(anchor), direction)
+                self.nextTileFinder(anchor, anchor, node,
+                                    deck, direction, word, wordSet)
+        return wordSet
+
+    def nextTileFinder(self, anchor, position, node,
+                       deck, direction, word, wordSet):
+        usableLetters = set()
+        if position:
+            if not position.tile:
+                usableLetters = position.tilesets[not (direction % 2)] & node.edges.keys()
+                if " " in deck:
+                    otherLetters = set.difference(usableLetters, deck)
+                    usableLetters.add(" ")
+                usableLetters = set.intersection(usableLetters, deck)
+            else:
+                if position.tile in node.edges:
+                    self.nextTileFinder(anchor, position.neighbors[direction],
+                                        node.edges[position.tile], deck, direction,
+                                        word + position.tile, wordSet)
+        #Find more words; usableLetters will be empty if not position.
+        for letter in usableLetters:
+            tempDeck = deck[:]
+            tempDeck.remove(letter)
+            if tempDeck is None:
+                tempDeck = []
+            if letter == " ":
+                for otherLetter in otherLetters:
+                    self.nextTileFinder(anchor, position.neighbors[direction],
+                                        node.edges[otherLetter], tempDeck, direction,
+                                        word + otherLetter, wordSet)
+            else:
+                self.nextTileFinder(anchor, position.neighbors[direction],
+                                    node.edges[letter], tempDeck, direction,
+                                    word + letter, wordSet)
+        if not (position and position.tile):
+            if "+" in node.edges:
+                self.nextTileFinder(anchor, anchor.neighbors[direction + 2],
+                               node.edges["+"], deck, direction + 2, word + '+', wordSet)
+            if direction > 1 and node.final:
+                print(word)
+                tempWord = Dawg.daggadWord(word.split("-")[2])
+                wordSet.add("{} {} {}".format(str(anchor), direction % 2, tempWord))

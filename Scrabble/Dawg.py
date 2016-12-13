@@ -134,3 +134,7 @@ class Dawg:
             for i in range(len(word)):
                 daggadWords.append("+".join([word[i:], word[:i][::-1]]))
         return Dawg.makeDawg(daggadWords)
+
+    def daggadWord(word):
+        parts = word.split("+")
+        return parts[1][::-1]+parts[0]
