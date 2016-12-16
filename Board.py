@@ -9,6 +9,7 @@ from Scrabble.Dawg import Dawg as Dawg
 
 class Position:
     basicTileSet = set(string.ascii_lowercase)
+    tileScores = {}
 
     def __init__(self, coords):
         self.coords = coords
@@ -18,6 +19,7 @@ class Position:
         self.values = (1, 1)
         self.letterScore = 1
         self.wordScore = 1
+        self.crossScore = [0, 0]
 
     def __str__(self):
         return str(self.coords)
@@ -35,12 +37,6 @@ class Position:
 
     def crossCheck(self, character, direction):
         return character in self.tilesets[not direction]
-
-    def intersect(self, characterSet, direction):
-        try:
-            self.tilesets[direction].intersection_update(characterSet)
-        except:
-            self.tilesets[direction].intersection_update({characterSet})
 
     def place(self, character, direction):
         if not self.crossCheck(character, direction):
@@ -100,16 +96,31 @@ class Board:
 
     def updateAnchor(self, anchor):
         for direction, tileset in enumerate(anchor.tilesets):
-            tiles = set()
             if not anchor.neighbors[direction] \
                     or not anchor.neighbors[direction].tile:
                 if not anchor.neighbors[(direction + 2) % 4] \
                         or not anchor.neighbors[(direction + 2) % 4].tile:
                     continue
+            score = 0
+            tiles = set()
+            circumfix = ""
+            pos = anchor.neighbors[direction]
+            while pos and pos.tile:
+                score += Position.tileScores[pos.tile]
+                circumfix += pos.tile
+                pos = pos.neighbors[direction]
+            circumfix += "+"
+            pos = anchor.neighbors[(direction + 2) % 4]
+            while pos and pos.tile in dictNode.edges:
+                score += Position.tileScores[pos.tile]
+                circumfix += pos.tile
+                pos = pos.neighbors[(direction + 2) % 4]
+            
             for char in tileset:
                 dictNode = self.dictionary.root.edges[char]
                 pos = anchor.neighbors[direction]
                 while pos and pos.tile in dictNode.edges:
+                    score += Position.tileScores[pos.tile]
                     dictNode = dictNode.edges[pos.tile]
                     pos = pos.neighbors[direction]
                 if (pos and pos.tile) or '+' not in dictNode.edges:
@@ -117,6 +128,7 @@ class Board:
                 dictNode = dictNode.edges['+']
                 pos = anchor.neighbors[(direction + 2) % 4]
                 while pos and pos.tile in dictNode.edges:
+                    score += Position.tileScores[pos.tile]
                     dictNode = dictNode.edges[pos.tile]
                     pos = pos.neighbors[(direction + 2) % 4]
                 if (pos and pos.tile) or not dictNode.final:
