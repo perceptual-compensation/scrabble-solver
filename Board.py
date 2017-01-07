@@ -43,10 +43,10 @@ class Position:
         return letter in self.lettersets[not direction]
 
     def place(self, tile, direction, letter = ""):
-        if not self.crossCheck(tile, direction):
-            raise Exception("Word incompatible.")
         if tile != " ":
             letter = tile
+        if not self.crossCheck(letter, direction):
+            raise Exception("Word incompatible.")
         self.lettersets = [{letter}] * 2
         self.tile = tile
         self.letter = letter
